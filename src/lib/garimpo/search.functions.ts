@@ -1,23 +1,41 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { searchParamsSchema } from "./search.functions";
 
-export const searchParamsSchema = z.object({
-  nicho: z.string().trim().min(2).max(120),
-  localizacao: z.string().trim().min(2).max(120),
-  quantidade: z.number().int().min(10).max(1000),
-  potencialMinimo: z.enum(["TODOS", "MEDIO_MAIS", "ALTO"]),
-  filtros: z.object({
-    somenteSemSite: z.boolean(),
-    somenteComTelefone: z.boolean(),
-    buscarEmail: z.boolean(),
-    buscarInstagram: z.boolean(),
-  }),
-});
+export const saveApifyToken = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ token: z.string().min(10) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    const { error } = await supabaseAdmin
+      .from("user_settings")
+      .upsert({ key: "apify_token", value: data.token }, { onConflict: "key" });
+
+    if (error) {
+      console.error("Erro ao salvar token Apify:", error);
+      throw new Error("FALHA_AO_SALVAR_TOKEN");
+    }
+
+    return { success: true };
+  });
 
 export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(async () => {
   const { getApifyConfig } = await import("./apify.server");
-  const { configurado, actorId } = getApifyConfig();
-  return { apifyConfigurado: configurado, actorId, googleSheetsConfigurado: false };
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  
+  const { data: dbSetting } = await supabaseAdmin
+    .from("user_settings")
+    .select("value")
+    .eq("key", "apify_token")
+    .single();
+
+  const { configurado, actorId } = getApifyConfig(dbSetting?.value);
+  
+  return { 
+    apifyConfigurado: configurado, 
+    actorId, 
+    googleSheetsConfigurado: false 
+  };
 });
 
 export const garimparEmpresas = createServerFn({ method: "POST" })
@@ -26,9 +44,17 @@ export const garimparEmpresas = createServerFn({ method: "POST" })
     const { coletarNaApify, getApifyConfig } = await import("./apify.server");
     const { deduplicar } = await import("./normalize");
     const { atendePotencialMinimo } = await import("./score");
-    const { actorId } = getApifyConfig();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const brutos = await coletarNaApify(data);
+    const { data: dbSetting } = await supabaseAdmin
+      .from("user_settings")
+      .select("value")
+      .eq("key", "apify_token")
+      .single();
+    
+    const { actorId } = getApifyConfig(dbSetting?.value);
+
+    const brutos = await coletarNaApify(data, dbSetting?.value);
     const unicos = deduplicar(brutos);
 
     let leads = unicos;
