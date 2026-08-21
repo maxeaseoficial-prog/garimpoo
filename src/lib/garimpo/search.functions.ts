@@ -14,10 +14,40 @@ export const searchParamsSchema = z.object({
   }),
 });
 
+export const saveApifyToken = createServerFn({ method: "POST" })
+  .inputValidator((data) => z.object({ token: z.string().min(10) }).parse(data))
+  .handler(async ({ data, context }) => {
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+    
+    const { error } = await supabaseAdmin
+      .from("user_settings")
+      .upsert({ key: "apify_token", value: data.token }, { onConflict: "key" });
+
+    if (error) {
+      console.error("Erro ao salvar token Apify:", error);
+      throw new Error("FALHA_AO_SALVAR_TOKEN");
+    }
+
+    return { success: true };
+  });
+
 export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(async () => {
   const { getApifyConfig } = await import("./apify.server");
-  const { configurado, actorId } = getApifyConfig();
-  return { apifyConfigurado: configurado, actorId, googleSheetsConfigurado: false };
+  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
+  
+  const { data: dbSetting } = await supabaseAdmin
+    .from("user_settings")
+    .select("value")
+    .eq("key", "apify_token")
+    .single();
+
+  const { configurado, actorId } = getApifyConfig(dbSetting?.value);
+  
+  return { 
+    apifyConfigurado: configurado, 
+    actorId, 
+    googleSheetsConfigurado: false 
+  };
 });
 
 export const garimparEmpresas = createServerFn({ method: "POST" })
@@ -26,9 +56,17 @@ export const garimparEmpresas = createServerFn({ method: "POST" })
     const { coletarNaApify, getApifyConfig } = await import("./apify.server");
     const { deduplicar } = await import("./normalize");
     const { atendePotencialMinimo } = await import("./score");
-    const { actorId } = getApifyConfig();
+    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const brutos = await coletarNaApify(data);
+    const { data: dbSetting } = await supabaseAdmin
+      .from("user_settings")
+      .select("value")
+      .eq("key", "apify_token")
+      .single();
+    
+    const { actorId } = getApifyConfig(dbSetting?.value);
+
+    const brutos = await coletarNaApify(data, dbSetting?.value);
     const unicos = deduplicar(brutos);
 
     let leads = unicos;

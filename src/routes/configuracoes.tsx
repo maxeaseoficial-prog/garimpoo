@@ -1,9 +1,11 @@
 import { createFileRoute } from "@tanstack/react-router";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { useServerFn } from "@tanstack/react-start";
+import { useState } from "react";
+import { toast } from "sonner";
 import { Layout } from "@/components/garimpo/Layout";
-import { PixelPanel } from "@/components/garimpo/pixel";
-import { getIntegrationStatus } from "@/lib/garimpo/search.functions";
+import { PixelButton, PixelInput, PixelLabel, PixelPanel } from "@/components/garimpo/pixel";
+import { getIntegrationStatus, saveApifyToken } from "@/lib/garimpo/search.functions";
 
 export const Route = createFileRoute("/configuracoes")({
   head: () => ({
@@ -39,8 +41,28 @@ function StatusTag({ ok }: { ok: boolean }) {
 }
 
 function ConfiguracoesPage() {
+  const queryClient = useQueryClient();
   const statusFn = useServerFn(getIntegrationStatus);
-  const { data } = useQuery({ queryKey: ["integration-status"], queryFn: () => statusFn({}) });
+  const saveTokenFn = useServerFn(saveApifyToken);
+  
+  const { data, isLoading } = useQuery({ 
+    queryKey: ["integration-status"], 
+    queryFn: () => statusFn({}) 
+  });
+
+  const [token, setToken] = useState("");
+
+  const saveMutation = useMutation({
+    mutationFn: (newToken: string) => saveTokenFn({ data: { token: newToken } }),
+    onSuccess: () => {
+      toast.success("Token Apify salvo com sucesso!");
+      setToken("");
+      queryClient.invalidateQueries({ queryKey: ["integration-status"] });
+    },
+    onError: () => {
+      toast.error("Erro ao salvar o token. Tente novamente.");
+    },
+  });
 
   return (
     <Layout>
@@ -52,17 +74,43 @@ function ConfiguracoesPage() {
             <h2 className="text-xs text-gold">Apify — coleta de empresas</h2>
             <StatusTag ok={Boolean(data?.apifyConfigurado)} />
           </div>
+          
           <p className="mt-3 text-sm text-muted-foreground">
-            A coleta roda no servidor do Garimpo. O token da Apify nunca é enviado ao navegador.
+            A coleta roda no servidor do Garimpo. O token da Apify é armazenado de forma segura no seu banco de dados Lovable Cloud.
           </p>
-          <dl className="mt-4 space-y-2 text-sm">
+
+          <div className="mt-6 border-t border-border/40 pt-4">
+            <PixelLabel>Configurar Token da Apify</PixelLabel>
+            <div className="flex flex-col gap-3 sm:flex-row">
+              <PixelInput
+                type="password"
+                value={token}
+                onChange={(e) => setToken(e.target.value)}
+                placeholder="Insira seu API Token..."
+                className="flex-1"
+              />
+              <PixelButton
+                disabled={token.length < 10 || saveMutation.isPending}
+                onClick={() => saveMutation.mutate(token)}
+              >
+                {saveMutation.isPending ? "Salvando..." : "Salvar Token"}
+              </PixelButton>
+            </div>
+            <p className="mt-2 text-[10px] text-muted-foreground">
+              Obtenha seu token em: Apify Console → Settings → API & Integrations
+            </p>
+          </div>
+
+          <dl className="mt-6 space-y-2 text-sm">
             <div className="flex justify-between gap-3 border-b border-border/60 pb-2">
               <dt className="text-xs text-muted-foreground">Actor</dt>
               <dd className="font-mono text-xs break-all">{data?.actorId ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-xs text-muted-foreground">Segredos necessários</dt>
-              <dd className="font-mono text-xs">APIFY_API_TOKEN, APIFY_ACTOR_ID</dd>
+              <dt className="text-xs text-muted-foreground">Status do Actor</dt>
+              <dd className="font-mono text-xs">
+                {isLoading ? "Verificando..." : data?.apifyConfigurado ? "PRONTO PARA USO" : "TOKEN PENDENTE"}
+              </dd>
             </div>
           </dl>
         </PixelPanel>

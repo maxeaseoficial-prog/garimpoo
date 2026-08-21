@@ -14,9 +14,10 @@ import {
  */
 export const DEFAULT_ACTOR_ID = "compass~crawler-google-places";
 
-export function getApifyConfig() {
-  const token = process.env["APIFY_API_TOKEN"] ?? null;
-  const actorId = process.env["APIFY_ACTOR_ID"] ?? DEFAULT_ACTOR_ID;
+export function getApifyConfig(dbToken?: string | null) {
+  const envToken = process.env["APIFY_API_TOKEN"];
+  const token = dbToken || envToken || null;
+  const actorId = process.env["APIFY_ACTOR_ID"] || DEFAULT_ACTOR_ID;
   return { token, actorId, configurado: Boolean(token) };
 }
 
@@ -84,8 +85,8 @@ export function normalizarPlace(place: ApifyPlace, fonte: string): Lead | null {
   });
 }
 
-export async function coletarNaApify(params: SearchParams): Promise<Lead[]> {
-  const { token, actorId } = getApifyConfig();
+export async function coletarNaApify(params: SearchParams, dbToken?: string | null): Promise<Lead[]> {
+  const { token, actorId } = getApifyConfig(dbToken);
   if (!token) throw new Error("INTEGRACAO_NAO_CONFIGURADA");
 
   const input = {
