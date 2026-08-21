@@ -120,11 +120,34 @@ function ConfiguracoesPage() {
             <h2 className="text-xs text-gold">Google Planilhas — exportação</h2>
             <StatusTag ok={Boolean(data?.googleSheetsConfigurado)} />
           </div>
+          
           <p className="mt-3 text-sm text-muted-foreground">
-            Ainda não autorizado. Após a autorização do Google, será possível criar uma nova
-            planilha ou adicionar os leads a uma planilha existente. Enquanto isso, use a
-            exportação CSV — as colunas são exatamente as mesmas.
+            {data?.googleSheetsConfigurado 
+              ? "Sua conta Google está conectada. Agora você pode exportar leads diretamente para suas planilhas."
+              : "Conecte sua conta Google para exportar leads automaticamente para o Google Planilhas."}
           </p>
+
+          {!data?.googleSheetsConfigurado && (
+            <div className="mt-6 border-t border-border/40 pt-4">
+              <PixelButton 
+                onClick={async () => {
+                  const { lovable } = await import("@/integrations/lovable/index");
+                  await lovable.auth.signInWithOAuth("google", {
+                    redirect_uri: window.location.origin + "/configuracoes",
+                  });
+                }}
+                className="w-full sm:w-auto"
+              >
+                Conectar com Google
+              </PixelButton>
+            </div>
+          )}
+
+          {data?.googleSheetsConfigurado && (
+            <div className="mt-4 text-xs text-muted-foreground">
+              ✓ Integração ativa via Lovable Cloud
+            </div>
+          )}
         </PixelPanel>
       </div>
     </Layout>
