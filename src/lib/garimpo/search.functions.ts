@@ -1,6 +1,18 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
-import { searchParamsSchema } from "./search.functions";
+
+export const searchParamsSchema = z.object({
+  nicho: z.string().trim().min(2).max(120),
+  localizacao: z.string().trim().min(2).max(120),
+  quantidade: z.number().int().min(10).max(1000),
+  potencialMinimo: z.enum(["TODOS", "MEDIO_MAIS", "ALTO"]),
+  filtros: z.object({
+    somenteSemSite: z.boolean(),
+    somenteComTelefone: z.boolean(),
+    buscarEmail: z.boolean(),
+    buscarInstagram: z.boolean(),
+  }),
+});
 
 export const saveApifyToken = createServerFn({ method: "POST" })
   .inputValidator((data) => z.object({ token: z.string().min(10) }).parse(data))
