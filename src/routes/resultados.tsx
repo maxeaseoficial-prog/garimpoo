@@ -10,9 +10,8 @@ import { idUltimoResultado, lerResultado } from "@/lib/garimpo/store";
 import type { Lead, SearchResult } from "@/lib/garimpo/types";
 
 export const Route = createFileRoute("/resultados")({
-  validateSearch: (search: Record<string, unknown>) => ({
-    id: typeof search["id"] === "string" ? search["id"] : undefined,
-  }),
+  validateSearch: (search: Record<string, unknown>): { id?: string } =>
+    typeof search["id"] === "string" ? { id: search["id"] } : {},
   head: () => ({
     meta: [
       { title: "Resultados — Garimpo" },
