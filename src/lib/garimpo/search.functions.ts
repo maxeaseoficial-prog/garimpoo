@@ -31,29 +31,25 @@ export const saveApifyToken = createServerFn({ method: "POST" })
     return { success: true };
   });
 
+/** Status da integração Apify. NUNCA retorna o token — apenas se existe. */
 export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(async () => {
   const { getApifyConfig } = await import("./apify.server");
   const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-  
-  const { data: dbSetting } = await supabaseAdmin
+
+  const { data: dbSetting, error } = await supabaseAdmin
     .from("user_settings")
     .select("value")
     .eq("key", "apify_token")
-    .single();
+    .maybeSingle();
+
+  if (error) {
+    console.error("Erro ao ler configuração da Apify:", error.message);
+    throw new Error("FALHA_AO_VERIFICAR_INTEGRACAO");
+  }
 
   const { configurado, actorId } = getApifyConfig(dbSetting?.value);
-  
-  // No Lovable Cloud, verificamos se o usuário está logado via context ou similar.
-  // Para simplificar o status da integração "Google Sheets", vamos considerar ativado se houver sessão.
-  // Em um cenário real, poderíamos verificar tokens de integração específicos.
-  const { data: { users } } = await supabaseAdmin.auth.admin.listUsers();
-  const googleConfigurado = users.some(u => u.identities?.some(i => i.provider === 'google'));
-  
-  return { 
-    apifyConfigurado: configurado, 
-    actorId, 
-    googleSheetsConfigurado: googleConfigurado 
-  };
+
+  return { apifyConfigurado: configurado, actorId };
 });
 
 export const garimparEmpresas = createServerFn({ method: "POST" })
