@@ -54,7 +54,7 @@ export const startGoogleSheetsConnect = createServerFn({ method: "POST" })
       appUserId: context.userId,
       clientAPIKey,
       returnUrl,
-      connectionAPIKey: existingKey ?? undefined,
+      ...(existingKey ? { connectionAPIKey: existingKey } : {}),
       credentialsConfiguration: { scopes: GOOGLE_SCOPES },
     });
 

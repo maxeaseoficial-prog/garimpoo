@@ -13,6 +13,7 @@ import { Route as IndexRouteImport } from './routes/index'
 import { Route as ConfiguracoesRouteImport } from './routes/configuracoes'
 import { Route as HistoricoRouteImport } from './routes/historico'
 import { Route as ResultadosRouteImport } from './routes/resultados'
+import { Route as OauthGoogleSheetsReturnRouteImport } from './routes/oauth/google-sheets/return'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -34,18 +35,25 @@ const ResultadosRoute = ResultadosRouteImport.update({
   path: '/resultados',
   getParentRoute: () => rootRouteImport,
 } as any)
+const OauthGoogleSheetsReturnRoute = OauthGoogleSheetsReturnRouteImport.update({
+  id: '/oauth/google-sheets/return',
+  path: '/oauth/google-sheets/return',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/resultados': typeof ResultadosRoute
+  '/oauth/google-sheets/return': typeof OauthGoogleSheetsReturnRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/resultados': typeof ResultadosRoute
+  '/oauth/google-sheets/return': typeof OauthGoogleSheetsReturnRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -53,13 +61,30 @@ export interface FileRoutesById {
   '/configuracoes': typeof ConfiguracoesRoute
   '/historico': typeof HistoricoRoute
   '/resultados': typeof ResultadosRoute
+  '/oauth/google-sheets/return': typeof OauthGoogleSheetsReturnRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/configuracoes' | '/historico' | '/resultados'
+  fullPaths:
+    | '/'
+    | '/configuracoes'
+    | '/historico'
+    | '/resultados'
+    | '/oauth/google-sheets/return'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/configuracoes' | '/historico' | '/resultados'
-  id: '__root__' | '/' | '/configuracoes' | '/historico' | '/resultados'
+  to:
+    | '/'
+    | '/configuracoes'
+    | '/historico'
+    | '/resultados'
+    | '/oauth/google-sheets/return'
+  id:
+    | '__root__'
+    | '/'
+    | '/configuracoes'
+    | '/historico'
+    | '/resultados'
+    | '/oauth/google-sheets/return'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -67,6 +92,7 @@ export interface RootRouteChildren {
   ConfiguracoesRoute: typeof ConfiguracoesRoute
   HistoricoRoute: typeof HistoricoRoute
   ResultadosRoute: typeof ResultadosRoute
+  OauthGoogleSheetsReturnRoute: typeof OauthGoogleSheetsReturnRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -99,6 +125,13 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof ResultadosRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/oauth/google-sheets/return': {
+      id: '/oauth/google-sheets/return'
+      path: '/oauth/google-sheets/return'
+      fullPath: '/oauth/google-sheets/return'
+      preLoaderRoute: typeof OauthGoogleSheetsReturnRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
@@ -107,6 +140,7 @@ const rootRouteChildren: RootRouteChildren = {
   ConfiguracoesRoute: ConfiguracoesRoute,
   HistoricoRoute: HistoricoRoute,
   ResultadosRoute: ResultadosRoute,
+  OauthGoogleSheetsReturnRoute: OauthGoogleSheetsReturnRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
