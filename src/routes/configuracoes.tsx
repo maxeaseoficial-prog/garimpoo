@@ -128,17 +128,6 @@ function ConfiguracoesPage() {
     retry: false,
   });
 
-  const saveMutation = useMutation({
-    mutationFn: (novoToken: string) => saveTokenFn({ data: { token: novoToken } }),
-    onSuccess: async () => {
-      setToken("");
-      setSubstituindo(false);
-      await queryClient.invalidateQueries({ queryKey: ["integration-status"] });
-      toast.success("Token Apify salvo com sucesso!");
-    },
-    onError: () => toast.error("Erro ao salvar o token. Tente novamente."),
-  });
-
   const connectMutation = useMutation({
     mutationFn: async () => {
       const popup = window.open("", "garimpo-google-oauth", "width=600,height=720");
