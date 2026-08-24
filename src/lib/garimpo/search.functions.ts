@@ -33,7 +33,47 @@ export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(as
 export const garimparEmpresas = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => searchParamsSchema.parse(data))
   .handler(async ({ data }) => {
-    const { garimparComMeta, FONTE, type Rejeicao } = { ...(await import("./googleMaps.server")) } as never;
-    return garimparComMeta as never;
+    const { garimparComMeta, FONTE } = await import("./googleMaps.server");
+    const { atendePotencialMinimo } = await import("./score");
+    const { montarConsultas } = await import("./queryPlan");
+
+    const consultas = montarConsultas(
+      data.nicho,
+      data.nichoId ?? null,
+      data.localizacao,
+      data.quantidade,
+    );
+
+    const { leads, diagnostico } = await garimparComMeta({
+      consultas,
+      alvo: data.quantidade,
+      aceitar: (lead) => {
+        if (data.filtros.somenteSemSite && lead.website) return "website";
+        if (data.filtros.somenteComTelefone && !lead.telefone) return "telefone";
+        if (!atendePotencialMinimo(lead.potencial, data.potencialMinimo)) return "potencial";
+        return "ok";
+      },
+    });
+
+    return {
+      id: `${Date.now()}`,
+      params: data,
+      fonte: FONTE,
+      criadoEm: new Date().toISOString(),
+      stats: {
+        meta: data.quantidade,
+        metaAtingida: diagnostico.metaAtingida,
+        diagnostico,
+        totalBruto: diagnostico.rawFetched,
+        aposDeduplicacao: diagnostico.rawFetched - diagnostico.duplicatesRemoved,
+        semSite: leads.filter((l) => !l.website).length,
+        comTelefone: leads.filter((l) => Boolean(l.telefone)).length,
+        comEmail: leads.filter((l) => Boolean(l.email)).length,
+        comInstagram: leads.filter((l) => Boolean(l.instagram)).length,
+        qualificados: leads.length,
+      },
+      leads,
+    };
   });
+
 
