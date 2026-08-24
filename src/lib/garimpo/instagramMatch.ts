@@ -113,11 +113,14 @@ export function pontuar(hit: SearchHit, empresa: EmpresaRef, username: string) {
 
   const userNorm = username.replace(/[._]/g, "");
   const nomeSemEspaco = nome.replace(/\s/g, "");
+  let usernameRelacionado = false;
   if (nomeSemEspaco && userNorm.includes(nomeSemEspaco)) {
     score += 15;
+    usernameRelacionado = true;
     motivos.push("username contém o nome");
-  } else if (tokens[0] && userNorm.includes(tokens[0])) {
+  } else if (tokens[0] && tokens[0].length >= 5 && userNorm.includes(tokens[0])) {
     score += 8;
+    usernameRelacionado = true;
     motivos.push("username contém termo principal");
   }
 
@@ -148,12 +151,14 @@ export function pontuar(hit: SearchHit, empresa: EmpresaRef, username: string) {
   }
 
   const tel = apenasDigitos(empresa.telefone).slice(-8);
+  let telefoneCompativel = false;
   if (tel.length === 8 && textoDigitos.includes(tel)) {
     score += 40;
+    telefoneCompativel = true;
     motivos.push("telefone compatível");
   }
 
-  return { score, motivos };
+  return { score, motivos, usernameRelacionado, telefoneCompativel };
 }
 
 export function classificar(score: number): "high" | "medium" | "low" {
@@ -174,7 +179,19 @@ export function escolherCandidato(
     if (!username) continue;
     if (CAMINHOS_INVALIDOS.has(username)) continue;
 
-    const { score, motivos } = pontuar(hit, empresa, username);
+    const { score, motivos, usernameRelacionado, telefoneCompativel } = pontuar(
+      hit,
+      empresa,
+      username,
+    );
+    // Precisão acima de quantidade: sem vínculo direto (username ou telefone)
+    // o perfil pode ser de um corretor/terceiro que apenas cita a empresa.
+    const vinculoDireto = usernameRelacionado || telefoneCompativel;
+    const confianca = vinculoDireto
+      ? classificar(score)
+      : classificar(score) === "high"
+        ? "medium"
+        : classificar(score);
     const anterior = porUsuario.get(username);
     if (anterior && anterior.score >= score) continue;
     porUsuario.set(username, {
@@ -182,7 +199,7 @@ export function escolherCandidato(
       handle: `@${username}`,
       url: `https://www.instagram.com/${username}/`,
       score,
-      confidence: classificar(score),
+      confidence: confianca,
       motivos,
     });
   }
