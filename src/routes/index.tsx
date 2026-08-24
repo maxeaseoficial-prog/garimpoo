@@ -74,14 +74,14 @@ function BuscarPage() {
 
   const [nicho, setNicho] = useState("");
   const [localizacao, setLocalizacao] = useState("");
-  const [quantidade, setQuantidade] = useState(500);
+  const [quantidade, setQuantidade] = useState(20);
   const [potencialMinimo, setPotencialMinimo] =
     useState<SearchParams["potencialMinimo"]>("MEDIO_MAIS");
   const [filtros, setFiltros] = useState({
     somenteSemSite: true,
     somenteComTelefone: true,
-    buscarEmail: true,
-    buscarInstagram: true,
+    buscarEmail: false,
+    buscarInstagram: false,
   });
   const [etapa, setEtapa] = useState(0);
 
