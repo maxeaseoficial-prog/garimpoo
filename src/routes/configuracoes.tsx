@@ -4,8 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Layout } from "@/components/garimpo/Layout";
-import { PixelButton, PixelInput, PixelLabel, PixelPanel } from "@/components/garimpo/pixel";
-import { getIntegrationStatus, saveApifyToken } from "@/lib/garimpo/search.functions";
+import { PixelButton, PixelPanel } from "@/components/garimpo/pixel";
+import { getIntegrationStatus } from "@/lib/garimpo/search.functions";
 import {
   disconnectGoogleSheets,
   getGoogleSheetsStatus,
