@@ -31,7 +31,7 @@ export function leadParaLinha(lead: Lead, nicho: string): string[] {
     lead.telefoneNormalizado ?? lead.telefone ?? "",
     lead.whatsapp ?? "",
     lead.email ?? "Não encontrado",
-    lead.instagram ?? "Não encontrado",
+    lead.instagramUrl ?? "",
     lead.responsavel ?? "Não encontrado",
     lead.quantidadeAvaliacoes != null ? String(lead.quantidadeAvaliacoes) : "",
     lead.nota != null ? String(lead.nota).replace(".", ",") : "",

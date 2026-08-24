@@ -50,6 +50,8 @@ const ETAPAS = [
   "Preparando resultados",
 ];
 
+const ETAPA_INSTAGRAM = "Buscando Instagram dos leads";
+
 function BuscarPage() {
   const navigate = useNavigate();
   const chamarBusca = useServerFn(garimparEmpresas);
@@ -71,6 +73,7 @@ function BuscarPage() {
     buscarInstagram: false,
   });
   const [etapa, setEtapa] = useState(0);
+  const etapas = filtros.buscarInstagram ? [...ETAPAS, ETAPA_INSTAGRAM] : ETAPAS;
 
   const mutation = useMutation({
     mutationFn: (params: SearchParams) => chamarBusca({ data: params }),
@@ -83,9 +86,9 @@ function BuscarPage() {
   useEffect(() => {
     if (!mutation.isPending) return;
     setEtapa(0);
-    const id = setInterval(() => setEtapa((e) => Math.min(e + 1, ETAPAS.length - 1)), 6000);
+    const id = setInterval(() => setEtapa((e) => Math.min(e + 1, etapas.length - 1)), 6000);
     return () => clearInterval(id);
-  }, [mutation.isPending]);
+  }, [mutation.isPending, etapas.length]);
 
   const podeBuscar = (nicho?.label.trim().length ?? 0) >= 2 && localizacao.trim().length >= 2;
 
@@ -98,7 +101,7 @@ function BuscarPage() {
             {nicho?.label} — {localizacao}
           </p>
           <div className="mt-6 space-y-4">
-            {ETAPAS.map((nome, index) => (
+            {etapas.map((nome, index) => (
               <div key={nome}>
                 <div className="mb-1 flex items-center justify-between text-xs">
                   <span className={index <= etapa ? "text-foreground" : "text-muted-foreground/60"}>
@@ -238,11 +241,10 @@ function BuscarPage() {
                   hint="Enriquecimento em breve"
                 />
                 <PixelCheckbox
-                  disabled
-                  checked={false}
-                  onChange={() => {}}
+                  checked={filtros.buscarInstagram}
+                  onChange={(v) => setFiltros((f) => ({ ...f, buscarInstagram: v }))}
                   label="Buscar Instagram"
-                  hint="Enriquecimento em breve"
+                  hint="Localizar perfil oficial pela web"
                 />
               </div>
             </div>

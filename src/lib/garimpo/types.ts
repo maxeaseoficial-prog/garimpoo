@@ -14,6 +14,9 @@ export interface Lead {
   email: string | null;
   instagram: string | null;
   instagramUrl: string | null;
+  /** Auditoria interna do enriquecimento (não exibida ao usuário). */
+  instagramConfidence?: "high";
+  instagramSource?: string;
   responsavel: string | null;
   website: string | null;
   googleMapsUrl: string | null;
@@ -65,6 +68,13 @@ export interface SearchStats {
   comEmail: number;
   comInstagram: number;
   qualificados: number;
+  enriquecimento?: {
+    firecrawlSearchRequests: number;
+    firecrawlCreditsUsed: number | null;
+    instagramFound: number;
+    instagramNotFound: number;
+    cacheHits: number;
+  };
 }
 
 export interface SearchResult {

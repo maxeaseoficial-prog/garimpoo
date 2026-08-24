@@ -44,6 +44,33 @@ export type Database = {
         }
         Relationships: []
       }
+      instagram_cache: {
+        Row: {
+          checked_at: string
+          confidence: string | null
+          instagram_handle: string | null
+          instagram_url: string | null
+          place_id: string
+          source: string | null
+        }
+        Insert: {
+          checked_at?: string
+          confidence?: string | null
+          instagram_handle?: string | null
+          instagram_url?: string | null
+          place_id: string
+          source?: string | null
+        }
+        Update: {
+          checked_at?: string
+          confidence?: string | null
+          instagram_handle?: string | null
+          instagram_url?: string | null
+          place_id?: string
+          source?: string | null
+        }
+        Relationships: []
+      }
       user_settings: {
         Row: {
           created_at: string

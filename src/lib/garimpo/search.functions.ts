@@ -44,7 +44,7 @@ export const garimparEmpresas = createServerFn({ method: "POST" })
       data.quantidade,
     );
 
-    const { leads, diagnostico } = await garimparComMeta({
+    const { leads: leadsBase, diagnostico } = await garimparComMeta({
       consultas,
       alvo: data.quantidade,
       aceitar: (lead) => {
@@ -54,6 +54,15 @@ export const garimparEmpresas = createServerFn({ method: "POST" })
         return "ok";
       },
     });
+
+    let leads = leadsBase;
+    let enriquecimento;
+    if (data.filtros.buscarInstagram && leads.length > 0) {
+      const { enriquecerInstagram } = await import("./instagram.server");
+      const enriquecido = await enriquecerInstagram(leads);
+      leads = enriquecido.leads;
+      enriquecimento = enriquecido.stats;
+    }
 
     return {
       id: `${Date.now()}`,
@@ -71,6 +80,7 @@ export const garimparEmpresas = createServerFn({ method: "POST" })
         comEmail: leads.filter((l) => Boolean(l.email)).length,
         comInstagram: leads.filter((l) => Boolean(l.instagram)).length,
         qualificados: leads.length,
+        enriquecimento,
       },
       leads,
     };
