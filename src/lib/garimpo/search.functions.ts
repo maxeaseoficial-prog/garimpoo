@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const searchParamsSchema = z.object({
   nicho: z.string().trim().min(2).max(120),
+  nichoId: z.string().trim().max(60).nullable().optional(),
   localizacao: z.string().trim().min(2).max(120),
   quantidade: z.number().int().min(10).max(60),
   potencialMinimo: z.enum(["TODOS", "MEDIO_MAIS", "ALTO"]),
@@ -13,6 +14,7 @@ export const searchParamsSchema = z.object({
     buscarInstagram: z.boolean(),
   }),
 });
+
 
 /** Status da fonte de coleta. Nunca retorna credenciais. */
 export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(async () => {
