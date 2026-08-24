@@ -4,7 +4,7 @@ import { z } from "zod";
 export const searchParamsSchema = z.object({
   nicho: z.string().trim().min(2).max(120),
   localizacao: z.string().trim().min(2).max(120),
-  quantidade: z.number().int().min(10).max(1000),
+  quantidade: z.number().int().min(10).max(60),
   potencialMinimo: z.enum(["TODOS", "MEDIO_MAIS", "ALTO"]),
   filtros: z.object({
     somenteSemSite: z.boolean(),
@@ -14,69 +14,33 @@ export const searchParamsSchema = z.object({
   }),
 });
 
-export const saveApifyToken = createServerFn({ method: "POST" })
-  .inputValidator((data) => z.object({ token: z.string().min(10) }).parse(data))
-  .handler(async ({ data, context }) => {
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-    
-    const { error } = await supabaseAdmin
-      .from("user_settings")
-      .upsert({ key: "apify_token", value: data.token }, { onConflict: "key" });
-
-    if (error) {
-      console.error("Erro ao salvar token Apify:", error);
-      throw new Error("FALHA_AO_SALVAR_TOKEN");
-    }
-
-    return { success: true };
-  });
-
-/** Status da integração Apify. NUNCA retorna o token — apenas se existe. */
+/** Status da fonte de coleta. Nunca retorna credenciais. */
 export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(async () => {
-  const { getApifyConfig } = await import("./apify.server");
-  const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
-
-  const { data: dbSetting, error } = await supabaseAdmin
-    .from("user_settings")
-    .select("value")
-    .eq("key", "apify_token")
-    .maybeSingle();
-
-  if (error) {
-    console.error("Erro ao ler configuração da Apify:", error.message);
-    throw new Error("FALHA_AO_VERIFICAR_INTEGRACAO");
-  }
-
-  const { configurado, actorId } = getApifyConfig(dbSetting?.value);
-
-  return { apifyConfigurado: configurado, actorId };
+  const configurado = Boolean(
+    process.env["LOVABLE_API_KEY"] && process.env["GOOGLE_MAPS_API_KEY"],
+  );
+  return {
+    googleMapsConfigurado: configurado,
+    fonte: "Google Maps Platform",
+    api: "Places API (New)",
+    conexao: "Maps Garimpo",
+    modo: "Gerenciado pela Lovable",
+  };
 });
 
 export const garimparEmpresas = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => searchParamsSchema.parse(data))
   .handler(async ({ data }) => {
-    const { coletarNaApify, getApifyConfig } = await import("./apify.server");
+    const { coletarNoGoogleMaps, FONTE } = await import("./googleMaps.server");
     const { deduplicar } = await import("./normalize");
     const { atendePotencialMinimo } = await import("./score");
-    const { supabaseAdmin } = await import("@/integrations/supabase/client.server");
 
-    const { data: dbSetting } = await supabaseAdmin
-      .from("user_settings")
-      .select("value")
-      .eq("key", "apify_token")
-      .single();
-    
-    const { actorId } = getApifyConfig(dbSetting?.value);
-
-    const brutos = await coletarNaApify(data, dbSetting?.value);
+    const brutos = await coletarNoGoogleMaps(data);
     const unicos = deduplicar(brutos);
 
     let leads = unicos;
     if (data.filtros.somenteSemSite) leads = leads.filter((l) => !l.website);
     if (data.filtros.somenteComTelefone) leads = leads.filter((l) => Boolean(l.telefone));
-    if (!data.filtros.buscarEmail) leads = leads.map((l) => ({ ...l, email: null }));
-    if (!data.filtros.buscarInstagram)
-      leads = leads.map((l) => ({ ...l, instagram: null, instagramUrl: null }));
 
     const qualificados = leads.filter((l) =>
       atendePotencialMinimo(l.potencial, data.potencialMinimo),
@@ -85,7 +49,7 @@ export const garimparEmpresas = createServerFn({ method: "POST" })
     return {
       id: `${Date.now()}`,
       params: data,
-      actorId,
+      fonte: FONTE,
       criadoEm: new Date().toISOString(),
       stats: {
         totalBruto: brutos.length,
