@@ -51,15 +51,16 @@ const NICHOS = [
   "Lojas de móveis",
 ];
 
-const QUANTIDADES = [50, 100, 250, 500, 1000];
+const QUANTIDADES = [10, 20, 30, 40, 60];
 
 const ETAPAS = [
-  "Buscando empresas",
-  "Analisando websites",
+  "Buscando empresas no Google",
+  "Analisando resultados",
+  "Verificando websites",
   "Verificando telefones",
-  "Buscando contatos",
-  "Buscando Instagram",
+  "Removendo duplicados",
   "Calculando potencial",
+  "Preparando resultados",
 ];
 
 function BuscarPage() {
@@ -73,14 +74,14 @@ function BuscarPage() {
 
   const [nicho, setNicho] = useState("");
   const [localizacao, setLocalizacao] = useState("");
-  const [quantidade, setQuantidade] = useState(500);
+  const [quantidade, setQuantidade] = useState(20);
   const [potencialMinimo, setPotencialMinimo] =
     useState<SearchParams["potencialMinimo"]>("MEDIO_MAIS");
   const [filtros, setFiltros] = useState({
     somenteSemSite: true,
     somenteComTelefone: true,
-    buscarEmail: true,
-    buscarInstagram: true,
+    buscarEmail: false,
+    buscarInstagram: false,
   });
   const [etapa, setEtapa] = useState(0);
 
@@ -140,11 +141,11 @@ function BuscarPage() {
           <GarimpoLogo className="justify-center" />
         </div>
 
-        {status && !status.apifyConfigurado ? (
+        {status && !status.googleMapsConfigurado ? (
           <PixelPanel className="mb-6 flex items-start gap-3 border-gold-dark p-4">
             <AlertTriangle className="mt-0.5 size-5 shrink-0 text-gold" />
             <p className="text-sm text-muted-foreground">
-              Integração Apify não configurada. Adicione o token no servidor em{" "}
+              Conexão Google Maps indisponível. Verifique em{" "}
               <span className="text-gold">Integrações</span> para executar buscas reais.
             </p>
           </PixelPanel>
@@ -253,23 +254,31 @@ function BuscarPage() {
                   label="Somente empresas com telefone"
                 />
                 <PixelCheckbox
-                  checked={filtros.buscarEmail}
-                  onChange={(v) => setFiltros((f) => ({ ...f, buscarEmail: v }))}
+                  disabled
+                  checked={false}
+                  onChange={() => {}}
                   label="Buscar e-mail"
+                  hint="Enriquecimento em breve"
                 />
                 <PixelCheckbox
-                  checked={filtros.buscarInstagram}
-                  onChange={(v) => setFiltros((f) => ({ ...f, buscarInstagram: v }))}
+                  disabled
+                  checked={false}
+                  onChange={() => {}}
                   label="Buscar Instagram"
+                  hint="Enriquecimento em breve"
                 />
               </div>
             </div>
 
             {mutation.isError ? (
               <p className="border-2 border-destructive/60 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground">
-                {String(mutation.error).includes("INTEGRACAO_NAO_CONFIGURADA")
-                  ? "Integração Apify não configurada no servidor."
-                  : "Não foi possível concluir a busca. Tente novamente em instantes."}
+                {String(mutation.error).includes("GOOGLE_RATE_LIMIT")
+                  ? "Limite temporário de buscas atingido. Tente novamente mais tarde."
+                  : String(mutation.error).includes("GOOGLE_REQUEST_DENIED")
+                    ? "A busca foi negada pelo Google. Verifique a conexão em Integrações."
+                    : String(mutation.error).includes("INTEGRACAO_NAO_CONFIGURADA")
+                      ? "Conexão Google Maps não configurada no servidor."
+                      : "Não foi possível concluir a busca. Tente novamente em instantes."}
               </p>
             ) : null}
 

@@ -4,8 +4,8 @@ import { useServerFn } from "@tanstack/react-start";
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import { Layout } from "@/components/garimpo/Layout";
-import { PixelButton, PixelInput, PixelLabel, PixelPanel } from "@/components/garimpo/pixel";
-import { getIntegrationStatus, saveApifyToken } from "@/lib/garimpo/search.functions";
+import { PixelButton, PixelPanel } from "@/components/garimpo/pixel";
+import { getIntegrationStatus } from "@/lib/garimpo/search.functions";
 import {
   disconnectGoogleSheets,
   getGoogleSheetsStatus,
@@ -21,12 +21,12 @@ export const Route = createFileRoute("/configuracoes")({
       {
         name: "description",
         content:
-          "Status das integrações do Garimpo: coleta via Apify e exportação para Google Planilhas.",
+          "Status das integrações do Garimpo: coleta via Google Maps Platform e exportação para Google Planilhas.",
       },
       { property: "og:title", content: "Integrações — Garimpo" },
       {
         property: "og:description",
-        content: "Configure a coleta via Apify e a exportação para Google Planilhas.",
+        content: "Configure a coleta via Google Maps Platform e a exportação para Google Planilhas.",
       },
     ],
   }),
@@ -95,14 +95,11 @@ function waitForOAuthCompletion(popup: Window) {
 function ConfiguracoesPage() {
   const queryClient = useQueryClient();
   const statusFn = useServerFn(getIntegrationStatus);
-  const saveTokenFn = useServerFn(saveApifyToken);
   const googleStatusFn = useServerFn(getGoogleSheetsStatus);
   const startConnectFn = useServerFn(startGoogleSheetsConnect);
   const completeConnectFn = useServerFn(completeGoogleSheetsConnection);
   const disconnectFn = useServerFn(disconnectGoogleSheets);
 
-  const [token, setToken] = useState("");
-  const [substituindo, setSubstituindo] = useState(false);
   const [sessaoCarregando, setSessaoCarregando] = useState(true);
   const [logado, setLogado] = useState(false);
 
@@ -129,17 +126,6 @@ function ConfiguracoesPage() {
     queryFn: () => googleStatusFn({}),
     enabled: logado,
     retry: false,
-  });
-
-  const saveMutation = useMutation({
-    mutationFn: (novoToken: string) => saveTokenFn({ data: { token: novoToken } }),
-    onSuccess: async () => {
-      setToken("");
-      setSubstituindo(false);
-      await queryClient.invalidateQueries({ queryKey: ["integration-status"] });
-      toast.success("Token Apify salvo com sucesso!");
-    },
-    onError: () => toast.error("Erro ao salvar o token. Tente novamente."),
   });
 
   const connectMutation = useMutation({
@@ -174,11 +160,11 @@ function ConfiguracoesPage() {
     onError: () => toast.error("Não foi possível desconectar."),
   });
 
-  const apifyState: TagState = apify.isLoading
+  const mapsState: TagState = apify.isLoading
     ? "carregando"
     : apify.isError
       ? "erro"
-      : apify.data?.apifyConfigurado
+      : apify.data?.googleMapsConfigurado
         ? "conectado"
         : "nao-configurado";
 
@@ -191,8 +177,6 @@ function ConfiguracoesPage() {
           ? "conectado"
           : "nao-configurado";
 
-  const mostrarFormApify = apifyState !== "conectado" || substituindo;
-
   return (
     <Layout>
       <h1 className="text-sm text-gold sm:text-base">Integrações</h1>
@@ -200,87 +184,43 @@ function ConfiguracoesPage() {
       <div className="mt-5 grid gap-4">
         <PixelPanel className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xs text-gold">Apify — coleta de empresas</h2>
-            <StatusTag state={apifyState} />
+            <h2 className="text-xs text-gold">Google Maps Platform — coleta de empresas</h2>
+            <StatusTag state={mapsState} />
           </div>
 
           <p className="mt-3 text-sm text-muted-foreground">
-            A coleta roda no servidor do Garimpo. O token da Apify fica armazenado apenas no
-            servidor e nunca é enviado de volta para o navegador.
+            A coleta usa a conexão gerenciada pela Lovable. As credenciais ficam apenas no
+            servidor e nunca são enviadas ao navegador.
           </p>
 
-          {apifyState === "erro" && (
+          {mapsState === "erro" && (
             <div className="mt-4 border-t border-border/40 pt-4">
               <PixelButton onClick={() => apify.refetch()}>Tentar novamente</PixelButton>
             </div>
           )}
 
-          {apifyState === "conectado" && !substituindo && (
-            <div className="mt-6 border-t border-border/40 pt-4">
-              <PixelLabel>Token configurado</PixelLabel>
-              <p className="font-mono text-sm tracking-widest">••••••••••••••••</p>
-              <div className="mt-4">
-                <PixelButton onClick={() => setSubstituindo(true)}>Substituir token</PixelButton>
-              </div>
-            </div>
-          )}
-
-          {apifyState !== "erro" && apifyState !== "carregando" && mostrarFormApify && (
-            <div className="mt-6 border-t border-border/40 pt-4">
-              <PixelLabel>
-                {substituindo ? "Novo token da Apify" : "Configurar Token da Apify"}
-              </PixelLabel>
-              <div className="flex flex-col gap-3 sm:flex-row">
-                <PixelInput
-                  type="password"
-                  autoComplete="off"
-                  value={token}
-                  onChange={(e) => setToken(e.target.value)}
-                  placeholder="Insira seu API Token..."
-                  className="flex-1"
-                />
-                <PixelButton
-                  disabled={token.length < 10 || saveMutation.isPending}
-                  onClick={() => saveMutation.mutate(token)}
-                >
-                  {saveMutation.isPending ? "Salvando..." : "Salvar Token"}
-                </PixelButton>
-                {substituindo && (
-                  <PixelButton
-                    onClick={() => {
-                      setToken("");
-                      setSubstituindo(false);
-                    }}
-                  >
-                    Cancelar
-                  </PixelButton>
-                )}
-              </div>
-              <p className="mt-2 text-[10px] text-muted-foreground">
-                Obtenha seu token em: Apify Console → Settings → API & Integrations
-              </p>
-            </div>
-          )}
-
           <dl className="mt-6 space-y-2 text-sm">
             <div className="flex justify-between gap-3 border-b border-border/60 pb-2">
-              <dt className="text-xs text-muted-foreground">Actor</dt>
-              <dd className="font-mono text-xs break-all">{apify.data?.actorId ?? "—"}</dd>
+              <dt className="text-xs text-muted-foreground">Conexão</dt>
+              <dd className="font-mono text-xs break-all">{apify.data?.conexao ?? "—"}</dd>
+            </div>
+            <div className="flex justify-between gap-3 border-b border-border/60 pb-2">
+              <dt className="text-xs text-muted-foreground">API</dt>
+              <dd className="font-mono text-xs break-all">{apify.data?.api ?? "—"}</dd>
             </div>
             <div className="flex justify-between gap-3">
-              <dt className="text-xs text-muted-foreground">Status do Actor</dt>
+              <dt className="text-xs text-muted-foreground">Modo</dt>
               <dd className="font-mono text-xs">
-                {apifyState === "carregando"
+                {mapsState === "carregando"
                   ? "VERIFICANDO..."
-                  : apifyState === "erro"
-                    ? "—"
-                    : apifyState === "conectado"
-                      ? "PRONTO PARA USO"
-                      : "TOKEN PENDENTE"}
+                  : mapsState === "conectado"
+                    ? (apify.data?.modo ?? "—")
+                    : "—"}
               </dd>
             </div>
           </dl>
         </PixelPanel>
+
 
         <PixelPanel className="p-5">
           <div className="flex flex-wrap items-center justify-between gap-3">

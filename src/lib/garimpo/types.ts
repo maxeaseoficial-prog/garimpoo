@@ -54,7 +54,7 @@ export interface SearchResult {
   params: SearchParams;
   stats: SearchStats;
   leads: Lead[];
-  actorId: string;
+  fonte: string;
   criadoEm: string;
 }
 
