@@ -116,7 +116,10 @@ function ResultadosPage() {
 
         <PixelPanel className="grid grid-cols-2 gap-4 p-4 sm:grid-cols-5">
           {[
-            [resultado.leads.length, "empresas encontradas"],
+            [
+              stats.meta ? `${resultado.leads.length} de ${stats.meta}` : resultado.leads.length,
+              "empresas encontradas",
+            ],
             [stats.semSite, "sem site"],
             [stats.comTelefone, "com telefone"],
             [stats.comEmail, "com e-mail"],
@@ -128,6 +131,13 @@ function ResultadosPage() {
             </div>
           ))}
         </PixelPanel>
+
+        {stats.meta && !stats.metaAtingida ? (
+          <p className="border-2 border-border bg-secondary/40 px-3 py-2 text-xs text-muted-foreground">
+            Encontramos {resultado.leads.length} empresas que atendem a todos os filtros nesta
+            busca. Tente reduzir o potencial mínimo ou ampliar a localização.
+          </p>
+        ) : null}
 
         <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
           <div className="relative flex-1">

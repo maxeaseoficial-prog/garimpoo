@@ -33,13 +33,31 @@ export interface SearchFilters {
 
 export interface SearchParams {
   nicho: string;
+  /** id do nicho na taxonomia, "todos", ou null para busca personalizada. */
+  nichoId?: string | null;
   localizacao: string;
   quantidade: number;
   potencialMinimo: "TODOS" | "MEDIO_MAIS" | "ALTO";
   filtros: SearchFilters;
 }
 
+export interface SearchDiagnostico {
+  requestedTarget: number;
+  rawFetched: number;
+  duplicatesRemoved: number;
+  withWebsiteRemoved: number;
+  withoutPhoneRemoved: number;
+  potentialRemoved: number;
+  validCount: number;
+  consultasExecutadas: number;
+  chamadasHttp: number;
+  metaAtingida: boolean;
+}
+
 export interface SearchStats {
+  meta: number;
+  metaAtingida: boolean;
+  diagnostico: SearchDiagnostico;
   totalBruto: number;
   aposDeduplicacao: number;
   semSite: number;

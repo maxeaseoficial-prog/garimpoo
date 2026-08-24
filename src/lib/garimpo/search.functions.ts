@@ -3,6 +3,7 @@ import { z } from "zod";
 
 export const searchParamsSchema = z.object({
   nicho: z.string().trim().min(2).max(120),
+  nichoId: z.string().trim().max(60).nullable().optional(),
   localizacao: z.string().trim().min(2).max(120),
   quantidade: z.number().int().min(10).max(60),
   potencialMinimo: z.enum(["TODOS", "MEDIO_MAIS", "ALTO"]),
@@ -13,6 +14,7 @@ export const searchParamsSchema = z.object({
     buscarInstagram: z.boolean(),
   }),
 });
+
 
 /** Status da fonte de coleta. Nunca retorna credenciais. */
 export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(async () => {
@@ -31,20 +33,27 @@ export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(as
 export const garimparEmpresas = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => searchParamsSchema.parse(data))
   .handler(async ({ data }) => {
-    const { coletarNoGoogleMaps, FONTE } = await import("./googleMaps.server");
-    const { deduplicar } = await import("./normalize");
+    const { garimparComMeta, FONTE } = await import("./googleMaps.server");
     const { atendePotencialMinimo } = await import("./score");
+    const { montarConsultas } = await import("./queryPlan");
 
-    const brutos = await coletarNoGoogleMaps(data);
-    const unicos = deduplicar(brutos);
-
-    let leads = unicos;
-    if (data.filtros.somenteSemSite) leads = leads.filter((l) => !l.website);
-    if (data.filtros.somenteComTelefone) leads = leads.filter((l) => Boolean(l.telefone));
-
-    const qualificados = leads.filter((l) =>
-      atendePotencialMinimo(l.potencial, data.potencialMinimo),
+    const consultas = montarConsultas(
+      data.nicho,
+      data.nichoId ?? null,
+      data.localizacao,
+      data.quantidade,
     );
+
+    const { leads, diagnostico } = await garimparComMeta({
+      consultas,
+      alvo: data.quantidade,
+      aceitar: (lead) => {
+        if (data.filtros.somenteSemSite && lead.website) return "website";
+        if (data.filtros.somenteComTelefone && !lead.telefone) return "telefone";
+        if (!atendePotencialMinimo(lead.potencial, data.potencialMinimo)) return "potencial";
+        return "ok";
+      },
+    });
 
     return {
       id: `${Date.now()}`,
@@ -52,14 +61,19 @@ export const garimparEmpresas = createServerFn({ method: "POST" })
       fonte: FONTE,
       criadoEm: new Date().toISOString(),
       stats: {
-        totalBruto: brutos.length,
-        aposDeduplicacao: unicos.length,
-        semSite: unicos.filter((l) => !l.website).length,
+        meta: data.quantidade,
+        metaAtingida: diagnostico.metaAtingida,
+        diagnostico,
+        totalBruto: diagnostico.rawFetched,
+        aposDeduplicacao: diagnostico.rawFetched - diagnostico.duplicatesRemoved,
+        semSite: leads.filter((l) => !l.website).length,
         comTelefone: leads.filter((l) => Boolean(l.telefone)).length,
-        comEmail: qualificados.filter((l) => Boolean(l.email)).length,
-        comInstagram: qualificados.filter((l) => Boolean(l.instagram)).length,
-        qualificados: qualificados.length,
+        comEmail: leads.filter((l) => Boolean(l.email)).length,
+        comInstagram: leads.filter((l) => Boolean(l.instagram)).length,
+        qualificados: leads.length,
       },
-      leads: qualificados,
+      leads,
     };
   });
+
+
