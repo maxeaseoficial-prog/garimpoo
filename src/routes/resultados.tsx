@@ -1,13 +1,17 @@
 import { createFileRoute, Link, useSearch } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { Download, FileSpreadsheet, Search } from "lucide-react";
+import { useMutation } from "@tanstack/react-query";
+import { useServerFn } from "@tanstack/react-start";
+import { toast } from "sonner";
+import { Download, ExternalLink, FileSpreadsheet, Search } from "lucide-react";
 import { Layout } from "@/components/garimpo/Layout";
 import { ResultsTable } from "@/components/garimpo/ResultsTable";
 import { LeadDetails } from "@/components/garimpo/LeadDetails";
 import { PixelButton, PixelInput, PixelPanel } from "@/components/garimpo/pixel";
 import { baixarCSV } from "@/lib/garimpo/csv";
-import { idUltimoResultado, lerResultado } from "@/lib/garimpo/store";
-import type { Lead, SearchResult } from "@/lib/garimpo/types";
+import { idUltimoResultado, lerResultado, salvarPlanilha } from "@/lib/garimpo/store";
+import { exportarParaPlanilha } from "@/lib/garimpo/excel.functions";
+import type { Lead, PlanilhaRef, SearchResult } from "@/lib/garimpo/types";
 
 export const Route = createFileRoute("/resultados")({
   validateSearch: (search: Record<string, unknown>): { id?: string } =>
@@ -38,11 +42,52 @@ function ResultadosPage() {
   const [potencial, setPotencial] = useState<"TODOS" | "ALTO" | "MEDIO" | "BAIXO">("TODOS");
   const [selecionado, setSelecionado] = useState<Lead | null>(null);
   const [exportado, setExportado] = useState(false);
+  const [etapa, setEtapa] = useState<"idle" | "criando" | "exportando">("idle");
+  const [planilha, setPlanilha] = useState<PlanilhaRef | null>(null);
+  const exportarFn = useServerFn(exportarParaPlanilha);
 
   useEffect(() => {
-    setResultado(lerResultado(id ?? idUltimoResultado()));
+    const atual = lerResultado(id ?? idUltimoResultado());
+    setResultado(atual);
+    setPlanilha(atual?.planilha ?? null);
     setCarregado(true);
   }, [id]);
+
+  const exportacao = useMutation({
+    mutationFn: async () => {
+      if (!resultado || resultado.leads.length === 0)
+        throw new Error("Nenhum lead para exportar.");
+      setEtapa("criando");
+      try {
+        setEtapa("exportando");
+        return await exportarFn({
+          data: {
+            leads: resultado.leads,
+            nicho: resultado.params.nicho,
+            localizacao: resultado.params.localizacao,
+          },
+        });
+      } finally {
+        setEtapa("idle");
+      }
+    },
+    onSuccess: (ref) => {
+      const referencia: PlanilhaRef = {
+        provider: ref.provider,
+        fileId: ref.fileId,
+        url: ref.url,
+        nome: ref.nome,
+        criadoEm: ref.criadoEm,
+      };
+      setPlanilha(referencia);
+      if (resultado) salvarPlanilha(resultado.id, referencia);
+      toast.success("Planilha criada com sucesso.");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Não foi possível concluir a exportação."),
+  });
+
+
 
   const leads = useMemo(() => {
     if (!resultado) return [];
@@ -105,12 +150,28 @@ function ResultadosPage() {
               <Download className="size-4" />
               {exportado ? "CSV exportado" : "Exportar CSV"}
             </PixelButton>
-            <Link to="/configuracoes">
-              <PixelButton variant="outline">
-                <FileSpreadsheet className="size-4" />
-                Google Planilhas
-              </PixelButton>
-            </Link>
+            <PixelButton
+              variant="outline"
+              disabled={exportacao.isPending}
+              onClick={() => exportacao.mutate()}
+            >
+              <FileSpreadsheet className="size-4" />
+              {etapa === "criando"
+                ? "Criando planilha..."
+                : etapa === "exportando"
+                  ? "Exportando leads..."
+                  : planilha
+                    ? "Exportar novamente"
+                    : "Exportar para planilha"}
+            </PixelButton>
+            {planilha ? (
+              <a href={planilha.url} target="_blank" rel="noopener noreferrer">
+                <PixelButton>
+                  <ExternalLink className="size-4" />
+                  Abrir planilha
+                </PixelButton>
+              </a>
+            ) : null}
           </div>
         </div>
 

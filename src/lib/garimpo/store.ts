@@ -1,4 +1,4 @@
-import type { HistoryEntry, SearchResult } from "./types";
+import type { HistoryEntry, PlanilhaRef, SearchResult } from "./types";
 
 const HISTORY_KEY = "garimpo:historico";
 const RESULT_PREFIX = "garimpo:resultado:";
@@ -53,4 +53,24 @@ export function limparHistorico() {
   for (const entrada of lerHistorico()) localStorage.removeItem(RESULT_PREFIX + entrada.id);
   localStorage.removeItem(HISTORY_KEY);
   localStorage.removeItem(LAST_KEY);
+}
+
+/** Guarda a referência da planilha exportada, sem sobrescrever registros antigos. */
+export function salvarPlanilha(resultadoId: string, planilha: PlanilhaRef) {
+  if (typeof window === "undefined") return;
+  try {
+    const resultado = lerResultado(resultadoId);
+    if (resultado) {
+      localStorage.setItem(
+        RESULT_PREFIX + resultadoId,
+        JSON.stringify({ ...resultado, planilha }),
+      );
+    }
+    const historico = lerHistorico().map((item) =>
+      item.id === resultadoId ? { ...item, planilha } : item,
+    );
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(historico));
+  } catch {
+    /* armazenamento indisponível */
+  }
 }

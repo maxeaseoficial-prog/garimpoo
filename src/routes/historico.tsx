@@ -73,11 +73,18 @@ function HistoricoPage() {
                 {new Date(item.criadoEm).toLocaleString("pt-BR")}
               </p>
             </div>
-            <Link to="/resultados" search={{ id: item.id }}>
-              <PixelButton variant="outline" size="sm">
-                Abrir resultados
-              </PixelButton>
-            </Link>
+            <div className="flex flex-wrap gap-2">
+              <Link to="/resultados" search={{ id: item.id }}>
+                <PixelButton variant="outline" size="sm">
+                  Abrir resultados
+                </PixelButton>
+              </Link>
+              {item.planilha?.url ? (
+                <a href={item.planilha.url} target="_blank" rel="noopener noreferrer">
+                  <PixelButton size="sm">Abrir planilha</PixelButton>
+                </a>
+              ) : null}
+            </div>
           </PixelPanel>
         ))}
       </div>
