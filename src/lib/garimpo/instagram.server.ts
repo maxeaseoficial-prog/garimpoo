@@ -62,7 +62,7 @@ async function firecrawlSearch(query: string, location: string | null): Promise<
       if (json.success === false) {
         ultimaFalha = String(json.error ?? "resposta sem sucesso").slice(0, 200);
         if (/rate limit/i.test(ultimaFalha)) {
-          await new Promise((r) => setTimeout(r, 5000 * (tentativa + 1)));
+          await new Promise((r) => setTimeout(r, 12000 * (tentativa + 1)));
           continue;
         }
         break;
@@ -76,7 +76,7 @@ async function firecrawlSearch(query: string, location: string | null): Promise<
 
     ultimaFalha = `${response.status}: ${(await response.text()).slice(0, 200)}`;
     if (response.status === 429 || response.status >= 500) {
-      await new Promise((r) => setTimeout(r, 800 * (tentativa + 1)));
+      await new Promise((r) => setTimeout(r, 12000 * (tentativa + 1)));
       continue;
     }
     break;
@@ -167,6 +167,7 @@ export async function enriquecerInstagram(
       : "Brazil";
 
     let aceito: { handle: string; url: string } | null = null;
+    let falhou = false;
     for (const consulta of montarConsultas(lead)) {
       let resposta: FirecrawlSearchResult;
       try {
@@ -174,6 +175,7 @@ export async function enriquecerInstagram(
         resposta = await firecrawlSearch(consulta, location);
       } catch (erro) {
         console.error("Firecrawl search falhou:", String(erro).slice(0, 200));
+        falhou = true;
         break;
       }
       if (resposta.creditsUsed != null) {
@@ -189,7 +191,7 @@ export async function enriquecerInstagram(
         telefone: lead.telefoneNormalizado ?? lead.telefone,
       });
 
-      if (candidato && classificar(candidato.score) === "high") {
+      if (candidato && candidato.confidence === "high") {
         aceito = { handle: candidato.handle, url: candidato.url };
         break;
       }
@@ -199,7 +201,8 @@ export async function enriquecerInstagram(
     if (aceito) stats.instagramFound += 1;
     else stats.instagramNotFound += 1;
 
-    if (lead.placeId) {
+    // Falha de rede/rate limit não é resposta: nunca vira cache negativo.
+    if (lead.placeId && !falhou) {
       await supabaseAdmin.from("instagram_cache").upsert({
         place_id: lead.placeId,
         instagram_handle: aceito?.handle ?? null,
