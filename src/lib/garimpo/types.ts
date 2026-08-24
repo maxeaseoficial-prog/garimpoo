@@ -77,6 +77,14 @@ export interface SearchStats {
   };
 }
 
+export interface PlanilhaRef {
+  provider: "microsoft_excel";
+  fileId: string;
+  url: string;
+  nome: string;
+  criadoEm: string;
+}
+
 export interface SearchResult {
   id: string;
   params: SearchParams;
@@ -84,6 +92,7 @@ export interface SearchResult {
   leads: Lead[];
   fonte: string;
   criadoEm: string;
+  planilha?: PlanilhaRef;
 }
 
 export interface HistoryEntry {
@@ -93,4 +102,5 @@ export interface HistoryEntry {
   quantidade: number;
   leads: number;
   criadoEm: string;
+  planilha?: PlanilhaRef;
 }
