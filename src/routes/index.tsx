@@ -254,14 +254,18 @@ function BuscarPage() {
                   label="Somente empresas com telefone"
                 />
                 <PixelCheckbox
-                  checked={filtros.buscarEmail}
-                  onChange={(v) => setFiltros((f) => ({ ...f, buscarEmail: v }))}
+                  disabled
+                  checked={false}
+                  onChange={() => {}}
                   label="Buscar e-mail"
+                  hint="Enriquecimento em breve"
                 />
                 <PixelCheckbox
-                  checked={filtros.buscarInstagram}
-                  onChange={(v) => setFiltros((f) => ({ ...f, buscarInstagram: v }))}
+                  disabled
+                  checked={false}
+                  onChange={() => {}}
                   label="Buscar Instagram"
+                  hint="Enriquecimento em breve"
                 />
               </div>
             </div>
