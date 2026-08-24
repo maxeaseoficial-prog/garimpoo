@@ -272,9 +272,13 @@ function BuscarPage() {
 
             {mutation.isError ? (
               <p className="border-2 border-destructive/60 bg-destructive/10 px-3 py-2 text-sm text-destructive-foreground">
-                {String(mutation.error).includes("INTEGRACAO_NAO_CONFIGURADA")
-                  ? "Integração Apify não configurada no servidor."
-                  : "Não foi possível concluir a busca. Tente novamente em instantes."}
+                {String(mutation.error).includes("GOOGLE_RATE_LIMIT")
+                  ? "Limite temporário de buscas atingido. Tente novamente mais tarde."
+                  : String(mutation.error).includes("GOOGLE_REQUEST_DENIED")
+                    ? "A busca foi negada pelo Google. Verifique a conexão em Integrações."
+                    : String(mutation.error).includes("INTEGRACAO_NAO_CONFIGURADA")
+                      ? "Conexão Google Maps não configurada no servidor."
+                      : "Não foi possível concluir a busca. Tente novamente em instantes."}
               </p>
             ) : null}
 
