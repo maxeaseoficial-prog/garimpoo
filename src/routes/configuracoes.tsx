@@ -50,65 +50,6 @@ export const Route = createFileRoute("/configuracoes")({
   component: ConfiguracoesPage,
 });
 
-type TagState = "carregando" | "conectado" | "nao-configurado" | "erro";
-
-function StatusTag({ state }: { state: TagState }) {
-  const texto =
-    state === "carregando"
-      ? "VERIFICANDO..."
-      : state === "conectado"
-        ? "CONECTADO"
-        : state === "erro"
-          ? "NÃO FOI POSSÍVEL VERIFICAR"
-          : "NÃO CONFIGURADO";
-
-  return (
-    <span
-      className={`text-pixel border-2 px-2 py-1 text-[8px] tracking-wider ${
-        state === "conectado"
-          ? "border-gold-dark bg-primary text-primary-foreground"
-          : "border-border bg-secondary text-muted-foreground"
-      }`}
-    >
-      {texto}
-    </span>
-  );
-}
-
-function waitForOAuthCompletion(popup: Window) {
-  return new Promise<string | null>((resolve, reject) => {
-    let poll: number | undefined;
-    const cleanup = () => {
-      window.removeEventListener("message", onMessage);
-      if (poll !== undefined) window.clearInterval(poll);
-    };
-    const onMessage = (event: MessageEvent) => {
-      const type = (event.data as { type?: string } | null)?.type;
-      const data = event.data as { connectorId?: string; code?: unknown } | null;
-      if (
-        event.origin !== window.location.origin ||
-        event.source !== popup ||
-        data?.connectorId !== "google_sheets" ||
-        (type !== "appUserConnectorOAuthComplete" && type !== "appUserConnectorOAuthFailed")
-      )
-        return;
-      cleanup();
-      if (type === "appUserConnectorOAuthComplete") {
-        resolve(typeof data?.code === "string" ? data.code : null);
-        return;
-      }
-      popup.close();
-      reject(new Error("A autorização do Google falhou."));
-    };
-    window.addEventListener("message", onMessage);
-    poll = window.setInterval(() => {
-      if (!popup.closed) return;
-      cleanup();
-      reject(new Error("Janela fechada antes da conclusão."));
-    }, 500);
-  });
-}
-
 function ConfiguracoesPage() {
   const statusFn = useServerFn(getIntegrationStatus);
   const excelStatusFn = useServerFn(getExcelStatus);
