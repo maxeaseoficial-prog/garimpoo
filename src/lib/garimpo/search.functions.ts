@@ -33,35 +33,7 @@ export const getIntegrationStatus = createServerFn({ method: "GET" }).handler(as
 export const garimparEmpresas = createServerFn({ method: "POST" })
   .inputValidator((data: unknown) => searchParamsSchema.parse(data))
   .handler(async ({ data }) => {
-    const { coletarNoGoogleMaps, FONTE } = await import("./googleMaps.server");
-    const { deduplicar } = await import("./normalize");
-    const { atendePotencialMinimo } = await import("./score");
-
-    const brutos = await coletarNoGoogleMaps(data);
-    const unicos = deduplicar(brutos);
-
-    let leads = unicos;
-    if (data.filtros.somenteSemSite) leads = leads.filter((l) => !l.website);
-    if (data.filtros.somenteComTelefone) leads = leads.filter((l) => Boolean(l.telefone));
-
-    const qualificados = leads.filter((l) =>
-      atendePotencialMinimo(l.potencial, data.potencialMinimo),
-    );
-
-    return {
-      id: `${Date.now()}`,
-      params: data,
-      fonte: FONTE,
-      criadoEm: new Date().toISOString(),
-      stats: {
-        totalBruto: brutos.length,
-        aposDeduplicacao: unicos.length,
-        semSite: unicos.filter((l) => !l.website).length,
-        comTelefone: leads.filter((l) => Boolean(l.telefone)).length,
-        comEmail: qualificados.filter((l) => Boolean(l.email)).length,
-        comInstagram: qualificados.filter((l) => Boolean(l.instagram)).length,
-        qualificados: qualificados.length,
-      },
-      leads: qualificados,
-    };
+    const { garimparComMeta, FONTE, type Rejeicao } = { ...(await import("./googleMaps.server")) } as never;
+    return garimparComMeta as never;
   });
+
