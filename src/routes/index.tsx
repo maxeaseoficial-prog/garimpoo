@@ -13,6 +13,7 @@ import {
   PixelPanel,
   PixelProgress,
 } from "@/components/garimpo/pixel";
+import { NicheCombobox, type NicheSelection } from "@/components/garimpo/NicheCombobox";
 import { garimparEmpresas, getIntegrationStatus } from "@/lib/garimpo/search.functions";
 import { salvarResultado } from "@/lib/garimpo/store";
 import type { SearchParams, SearchResult } from "@/lib/garimpo/types";
@@ -37,21 +38,7 @@ export const Route = createFileRoute("/")({
   component: BuscarPage,
 });
 
-const NICHOS = [
-  "Clínicas odontológicas",
-  "Academias",
-  "Imobiliárias",
-  "Construtoras",
-  "Contabilidades",
-  "Autopeças",
-  "Oficinas mecânicas",
-  "Restaurantes",
-  "Hotéis",
-  "Escolas",
-  "Lojas de móveis",
-];
-
-const QUANTIDADES = [10, 20, 30, 40, 60];
+const QUANTIDADES = [10, 20, 30, 40, 50, 60];
 
 const ETAPAS = [
   "Buscando empresas no Google",
@@ -72,7 +59,7 @@ function BuscarPage() {
     queryFn: () => statusFn({}),
   });
 
-  const [nicho, setNicho] = useState("");
+  const [nicho, setNicho] = useState<NicheSelection | null>(null);
   const [localizacao, setLocalizacao] = useState("");
   const [quantidade, setQuantidade] = useState(20);
   const [potencialMinimo, setPotencialMinimo] =
@@ -100,7 +87,7 @@ function BuscarPage() {
     return () => clearInterval(id);
   }, [mutation.isPending]);
 
-  const podeBuscar = nicho.trim().length >= 2 && localizacao.trim().length >= 2;
+  const podeBuscar = (nicho?.label.trim().length ?? 0) >= 2 && localizacao.trim().length >= 2;
 
   if (mutation.isPending) {
     return (
@@ -108,7 +95,7 @@ function BuscarPage() {
         <PixelPanel className="mx-auto max-w-xl scanlines p-6 sm:p-8">
           <h1 className="text-sm text-gold sm:text-base">Garimpando oportunidades...</h1>
           <p className="mt-3 text-sm text-muted-foreground">
-            {nicho} — {localizacao}
+            {nicho?.label} — {localizacao}
           </p>
           <div className="mt-6 space-y-4">
             {ETAPAS.map((nome, index) => (
@@ -164,7 +151,8 @@ function BuscarPage() {
               e.preventDefault();
               if (!podeBuscar) return;
               mutation.mutate({
-                nicho: nicho.trim(),
+                nicho: nicho!.label.trim(),
+                nichoId: nicho!.id,
                 localizacao: localizacao.trim(),
                 quantidade,
                 potencialMinimo,
@@ -175,18 +163,7 @@ function BuscarPage() {
             <div className="grid gap-5 sm:grid-cols-2">
               <div>
                 <PixelLabel>Nicho</PixelLabel>
-                <PixelInput
-                  list="nichos"
-                  value={nicho}
-                  onChange={(e) => setNicho(e.target.value)}
-                  placeholder="Clínicas odontológicas"
-                  maxLength={120}
-                />
-                <datalist id="nichos">
-                  {NICHOS.map((n) => (
-                    <option key={n} value={n} />
-                  ))}
-                </datalist>
+                <NicheCombobox value={nicho} onChange={setNicho} />
               </div>
               <div>
                 <PixelLabel>Localização</PixelLabel>
