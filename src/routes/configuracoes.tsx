@@ -100,8 +100,6 @@ function ConfiguracoesPage() {
   const completeConnectFn = useServerFn(completeGoogleSheetsConnection);
   const disconnectFn = useServerFn(disconnectGoogleSheets);
 
-  const [token, setToken] = useState("");
-  const [substituindo, setSubstituindo] = useState(false);
   const [sessaoCarregando, setSessaoCarregando] = useState(true);
   const [logado, setLogado] = useState(false);
 
