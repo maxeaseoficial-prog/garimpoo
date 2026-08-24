@@ -1,4 +1,4 @@
-import type { Lead, SearchParams } from "./types";
+import type { Lead } from "./types";
 import { comPotencial, isWebsiteProprio, normalizarTelefoneBR } from "./normalize";
 
 /**
