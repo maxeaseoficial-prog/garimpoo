@@ -141,11 +141,11 @@ function BuscarPage() {
           <GarimpoLogo className="justify-center" />
         </div>
 
-        {status && !status.apifyConfigurado ? (
+        {status && !status.googleMapsConfigurado ? (
           <PixelPanel className="mb-6 flex items-start gap-3 border-gold-dark p-4">
             <AlertTriangle className="mt-0.5 size-5 shrink-0 text-gold" />
             <p className="text-sm text-muted-foreground">
-              Integração Apify não configurada. Adicione o token no servidor em{" "}
+              Conexão Google Maps indisponível. Verifique em{" "}
               <span className="text-gold">Integrações</span> para executar buscas reais.
             </p>
           </PixelPanel>
