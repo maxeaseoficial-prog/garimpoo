@@ -86,65 +86,134 @@ export function normalizarPlace(place: GooglePlace): Lead | null {
   });
 }
 
-export async function coletarNoGoogleMaps(params: SearchParams): Promise<Lead[]> {
+export interface Diagnostico {
+  requestedTarget: number;
+  rawFetched: number;
+  duplicatesRemoved: number;
+  withWebsiteRemoved: number;
+  withoutPhoneRemoved: number;
+  potentialRemoved: number;
+  validCount: number;
+  consultasExecutadas: number;
+  chamadasHttp: number;
+  metaAtingida: boolean;
+}
+
+export type Rejeicao = "ok" | "website" | "telefone" | "potencial";
+
+/** Limites de segurança — nunca chamar o Google indefinidamente. */
+const MAX_CONSULTAS = 14;
+const MAX_CHAMADAS = 40;
+const MAX_PAGINAS_POR_CONSULTA = 3;
+
+async function paginaSearchText(
+  textQuery: string,
+  pageToken: string | undefined,
+  lovableKey: string,
+  mapsKey: string,
+) {
+  const body: Record<string, unknown> = {
+    textQuery,
+    languageCode: "pt-BR",
+    regionCode: "BR",
+    pageSize: PAGE_SIZE,
+  };
+  if (pageToken) body["pageToken"] = pageToken;
+
+  const response = await fetch(`${GATEWAY_URL}/places/v1/places:searchText`, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${lovableKey}`,
+      "X-Connection-Api-Key": mapsKey,
+      "Content-Type": "application/json",
+      "X-Goog-FieldMask": FIELD_MASK,
+    },
+    body: JSON.stringify(body),
+  });
+
+  if (response.status === 429) throw new Error("GOOGLE_RATE_LIMIT");
+  if (!response.ok) {
+    const texto = await response.text();
+    console.error(`Places API falhou [${response.status}]: ${texto.slice(0, 300)}`);
+    if (response.status === 403) throw new Error("GOOGLE_REQUEST_DENIED");
+    throw new Error(`GOOGLE_ERRO_${response.status}`);
+  }
+
+  return (await response.json()) as { places?: GooglePlace[]; nextPageToken?: string };
+}
+
+/**
+ * Busca progressiva: consulta lotes reais no Google, normaliza, deduplica
+ * globalmente por placeId e aplica os filtros ANTES de contar a meta.
+ * Para assim que atinge o alvo de leads VÁLIDOS ou esgota fontes/limites.
+ */
+export async function garimparComMeta(opts: {
+  consultas: string[];
+  alvo: number;
+  aceitar: (lead: Lead) => Rejeicao;
+}): Promise<{ leads: Lead[]; diagnostico: Diagnostico }> {
   const lovableKey = process.env["LOVABLE_API_KEY"];
   const mapsKey = process.env["GOOGLE_MAPS_API_KEY"];
   if (!lovableKey || !mapsKey) throw new Error("INTEGRACAO_NAO_CONFIGURADA");
 
-  const textQuery = `${params.nicho} em ${params.localizacao}`;
-  const alvo = Math.min(params.quantidade, MAX_RESULTADOS);
-
+  const { chaveDeduplicacao } = await import("./normalize");
+  const alvo = Math.max(1, opts.alvo);
   const vistos = new Set<string>();
-  const leads: Lead[] = [];
-  let pageToken: string | undefined;
-  const tokensUsados = new Set<string>();
+  const validos: Lead[] = [];
+  const diag: Diagnostico = {
+    requestedTarget: alvo,
+    rawFetched: 0,
+    duplicatesRemoved: 0,
+    withWebsiteRemoved: 0,
+    withoutPhoneRemoved: 0,
+    potentialRemoved: 0,
+    validCount: 0,
+    consultasExecutadas: 0,
+    chamadasHttp: 0,
+    metaAtingida: false,
+  };
 
-  while (leads.length < alvo) {
-    const body: Record<string, unknown> = {
-      textQuery,
-      languageCode: "pt-BR",
-      regionCode: "BR",
-      pageSize: Math.min(PAGE_SIZE, alvo - leads.length),
-    };
-    if (pageToken) body["pageToken"] = pageToken;
+  for (const textQuery of opts.consultas.slice(0, MAX_CONSULTAS)) {
+    if (validos.length >= alvo || diag.chamadasHttp >= MAX_CHAMADAS) break;
+    diag.consultasExecutadas += 1;
 
-    const response = await fetch(`${GATEWAY_URL}/places/v1/places:searchText`, {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${lovableKey}`,
-        "X-Connection-Api-Key": mapsKey,
-        "Content-Type": "application/json",
-        "X-Goog-FieldMask": FIELD_MASK,
-      },
-      body: JSON.stringify(body),
-    });
+    let pageToken: string | undefined;
+    const tokensUsados = new Set<string>();
 
-    if (response.status === 429) throw new Error("GOOGLE_RATE_LIMIT");
-    if (!response.ok) {
-      const texto = await response.text();
-      console.error(`Places API falhou [${response.status}]: ${texto.slice(0, 500)}`);
-      if (response.status === 403) throw new Error("GOOGLE_REQUEST_DENIED");
-      throw new Error(`GOOGLE_ERRO_${response.status}`);
+    for (let pagina = 0; pagina < MAX_PAGINAS_POR_CONSULTA; pagina++) {
+      if (validos.length >= alvo || diag.chamadasHttp >= MAX_CHAMADAS) break;
+      diag.chamadasHttp += 1;
+      const json = await paginaSearchText(textQuery, pageToken, lovableKey, mapsKey);
+      const places = json.places ?? [];
+      diag.rawFetched += places.length;
+
+      for (const place of places) {
+        const lead = normalizarPlace(place);
+        if (!lead) continue;
+        const chave = chaveDeduplicacao(lead);
+        if (vistos.has(chave)) {
+          diag.duplicatesRemoved += 1;
+          continue;
+        }
+        vistos.add(chave);
+
+        const veredito = opts.aceitar(lead);
+        if (veredito === "website") diag.withWebsiteRemoved += 1;
+        else if (veredito === "telefone") diag.withoutPhoneRemoved += 1;
+        else if (veredito === "potencial") diag.potentialRemoved += 1;
+        else if (validos.length < alvo) validos.push(lead);
+
+        if (validos.length >= alvo) break;
+      }
+
+      const proximo = json.nextPageToken;
+      if (!proximo || tokensUsados.has(proximo) || places.length === 0) break;
+      tokensUsados.add(proximo);
+      pageToken = proximo;
     }
-
-    const json = (await response.json()) as {
-      places?: GooglePlace[];
-      nextPageToken?: string;
-    };
-
-    for (const place of json.places ?? []) {
-      const chave = place.id ?? place.displayName?.text ?? "";
-      if (chave && vistos.has(chave)) continue;
-      if (chave) vistos.add(chave);
-      const lead = normalizarPlace(place);
-      if (lead) leads.push(lead);
-    }
-
-    const proximo = json.nextPageToken;
-    if (!proximo || tokensUsados.has(proximo) || (json.places ?? []).length === 0) break;
-    tokensUsados.add(proximo);
-    pageToken = proximo;
   }
 
-  return leads.slice(0, alvo);
+  diag.validCount = validos.length;
+  diag.metaAtingida = validos.length >= alvo;
+  return { leads: validos.slice(0, alvo), diagnostico: diag };
 }
