@@ -21,12 +21,12 @@ export const Route = createFileRoute("/configuracoes")({
       {
         name: "description",
         content:
-          "Status das integrações do Garimpo: coleta via Apify e exportação para Google Planilhas.",
+          "Status das integrações do Garimpo: coleta via Google Maps Platform e exportação para Google Planilhas.",
       },
       { property: "og:title", content: "Integrações — Garimpo" },
       {
         property: "og:description",
-        content: "Configure a coleta via Apify e a exportação para Google Planilhas.",
+        content: "Configure a coleta via Google Maps Platform e a exportação para Google Planilhas.",
       },
     ],
   }),

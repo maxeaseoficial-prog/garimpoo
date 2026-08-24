@@ -37,7 +37,7 @@ export function Layout({ children }: { children: ReactNode }) {
       </header>
       <main className="mx-auto w-full max-w-6xl flex-1 px-4 py-8">{children}</main>
       <footer className="border-t-2 border-border px-4 py-5 text-center text-xs text-muted-foreground">
-        Garimpo — dados públicos coletados via Apify. Nenhum contato é inventado.
+        Garimpo — dados públicos do Google Maps Platform. Nenhum contato é inventado.
       </footer>
     </div>
   );
