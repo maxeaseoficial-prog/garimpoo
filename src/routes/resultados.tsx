@@ -53,6 +53,42 @@ function ResultadosPage() {
     setCarregado(true);
   }, [id]);
 
+  const exportacao = useMutation({
+    mutationFn: async () => {
+      if (!resultado || resultado.leads.length === 0)
+        throw new Error("Nenhum lead para exportar.");
+      setEtapa("criando");
+      try {
+        setEtapa("exportando");
+        return await exportarFn({
+          data: {
+            leads: resultado.leads,
+            nicho: resultado.params.nicho,
+            localizacao: resultado.params.localizacao,
+          },
+        });
+      } finally {
+        setEtapa("idle");
+      }
+    },
+    onSuccess: (ref) => {
+      const referencia: PlanilhaRef = {
+        provider: ref.provider,
+        fileId: ref.fileId,
+        url: ref.url,
+        nome: ref.nome,
+        criadoEm: ref.criadoEm,
+      };
+      setPlanilha(referencia);
+      if (resultado) salvarPlanilha(resultado.id, referencia);
+      toast.success("Planilha criada com sucesso.");
+    },
+    onError: (error: Error) =>
+      toast.error(error.message || "Não foi possível concluir a exportação."),
+  });
+
+
+
   const leads = useMemo(() => {
     if (!resultado) return [];
     const termo = busca.trim().toLowerCase();
