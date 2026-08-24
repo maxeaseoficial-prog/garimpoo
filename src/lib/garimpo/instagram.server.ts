@@ -1,5 +1,5 @@
 import type { Lead } from "./types";
-import { classificar, escolherCandidato, type SearchHit } from "./instagramMatch";
+import { escolherCandidato, type SearchHit } from "./instagramMatch";
 
 /**
  * Enriquecimento de Instagram via Firecrawl Search (Connector Gateway).
