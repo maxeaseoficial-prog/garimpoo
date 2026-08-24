@@ -51,15 +51,16 @@ const NICHOS = [
   "Lojas de móveis",
 ];
 
-const QUANTIDADES = [50, 100, 250, 500, 1000];
+const QUANTIDADES = [10, 20, 30, 40, 60];
 
 const ETAPAS = [
-  "Buscando empresas",
-  "Analisando websites",
+  "Buscando empresas no Google",
+  "Analisando resultados",
+  "Verificando websites",
   "Verificando telefones",
-  "Buscando contatos",
-  "Buscando Instagram",
+  "Removendo duplicados",
   "Calculando potencial",
+  "Preparando resultados",
 ];
 
 function BuscarPage() {
