@@ -95,7 +95,6 @@ function waitForOAuthCompletion(popup: Window) {
 function ConfiguracoesPage() {
   const queryClient = useQueryClient();
   const statusFn = useServerFn(getIntegrationStatus);
-  const saveTokenFn = useServerFn(saveApifyToken);
   const googleStatusFn = useServerFn(getGoogleSheetsStatus);
   const startConnectFn = useServerFn(startGoogleSheetsConnect);
   const completeConnectFn = useServerFn(completeGoogleSheetsConnection);
